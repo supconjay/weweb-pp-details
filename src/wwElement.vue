@@ -10,6 +10,15 @@
           {{ content.address }}
           <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
         </a>
+        <button
+          v-if="content.showOtherProjects !== false && content.otherProjectsCount != null && Number(content.otherProjectsCount) > 0"
+          type="button"
+          class="pp-otherproj"
+          @click="emit('otherProjects')"
+        >
+          <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('copy')"></path></svg>
+          {{ content.otherProjectsCount }} other {{ Number(content.otherProjectsCount) === 1 ? 'project' : 'projects' }} at this address
+        </button>
         <div class="pp-map">
           <iframe
             v-if="mapSrc"
@@ -37,9 +46,9 @@
         <div class="pp-field">
           <span class="pp-field__label">Inspection Report</span>
           <div class="pp-filechips">
-            <button v-for="(f, i) in files" :key="i" type="button" class="pp-filechip" @click="emitFile(i, f)">
+            <button v-for="(f, i) in files" :key="i" type="button" class="pp-filechip" :title="fileName(f)" @click="emitFile(i, f)">
               <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('file')"></path></svg>
-              <span>{{ f.name || f }}</span>
+              <span class="pp-filechip__name">{{ fileName(f) }}</span>
             </button>
             <span v-if="!files.length" class="pp-field__value pp-muted">No file uploaded</span>
           </div>
@@ -100,6 +109,7 @@ const ICONS = {
   user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   building: "M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  copy: "M9 9h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V11a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
   water: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z",
   electricity: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   gas: "M12 2s5 4.5 5 9a5 5 0 0 1-10 0c0-1.5.5-3 1.5-4.5C9 8 12 2 12 2zM12 22a3 3 0 0 1-3-3c0-1.5 1.5-3 3-4.5 1.5 1.5 3 3 3 4.5a3 3 0 0 1-3 3z",
@@ -152,6 +162,10 @@ export default {
   },
   methods: {
     ic(name) { return ICONS[name] || ""; },
+    fileName(f) {
+      const raw = f && typeof f === "object" ? f.name || "" : f || "";
+      try { return decodeURIComponent(raw); } catch (e) { return raw; }
+    },
     fieldLabel(kv) { return kv && typeof kv === "object" ? kv.label : ""; },
     fieldValue(kv) { return kv && typeof kv === "object" ? kv.value : kv; },
     emit(name) { this.$emit("trigger-event", { name, event: {} }); },
@@ -206,10 +220,15 @@ export default {
 .pp-field__value { color: var(--text); }
 .pp-muted { color: var(--text-muted); }
 
-.pp-filechips { display: flex; flex-wrap: wrap; gap: 8px; }
-.pp-filechip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: none; border-radius: 9px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+.pp-filechips { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.pp-filechip { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; min-width: 0; padding: 7px 11px; border: none; border-radius: 9px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
 .pp-filechip:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
-.pp-filechip .pp-svg { width: 14px; height: 14px; }
+.pp-filechip .pp-svg { width: 14px; height: 14px; flex: none; }
+.pp-filechip__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pp-otherproj { display: inline-flex; align-items: center; gap: 6px; margin: -6px 0 14px; padding: 0; border: none; background: none; color: var(--text-muted); font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer; transition: color .15s; }
+.pp-otherproj:hover { color: var(--primary); }
+.pp-otherproj .pp-svg { width: 14px; height: 14px; flex: none; }
 
 .pp-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid transparent; border-radius: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: filter .15s, background .15s, border-color .15s; }
 .pp-btn .pp-svg { width: 15px; height: 15px; }

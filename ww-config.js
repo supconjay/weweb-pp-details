@@ -6,10 +6,13 @@ export default {
     { name: "client", label: { en: "On client click" }, event: {} },
     { name: "uploadInspection", label: { en: "On inspection upload click" }, event: {} },
     { name: "fileClick", label: { en: "On inspection file click" }, event: { index: 0, name: "" } },
+    { name: "otherProjects", label: { en: "On 'other projects' click" }, event: {} },
   ],
   properties: {
     // ---- address column ----
     address: { label: { en: "Address" }, type: "Text", defaultValue: "1525 Wedgefield Court, Marietta, GA 30064, USA", bindable: true },
+    showOtherProjects: { label: { en: "Show 'other projects' line" }, type: "OnOff", defaultValue: true, bindable: true },
+    otherProjectsCount: { label: { en: "Other projects at address" }, type: "Number", defaultValue: 1, bindable: true },
     locationTitle: { label: { en: "Map title" }, type: "Text", defaultValue: "1525 Wedgefield Ct", bindable: true },
     locationSub: { label: { en: "Map subtitle" }, type: "Text", defaultValue: "Marietta, Georgia", bindable: true },
     // ---- google map embed ----
