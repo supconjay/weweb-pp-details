@@ -182,7 +182,7 @@ export default {
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --info: #3b82f6;
   --primary: var(--pp-primary, #10b981); --accent: var(--pp-accent, #6366f1); --radius: var(--pp-radius, 16px);
-  box-sizing: border-box; width: 100%; color: var(--text);
+  box-sizing: border-box; width: 100%; max-width: 100%; container-type: inline-size; color: var(--text);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.45;
 }
@@ -196,7 +196,7 @@ export default {
 .pp-root.pp-dark { @include dark; }
 @media (prefers-color-scheme: dark) { .pp-root.pp-auto { @include dark; } }
 
-.pp-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.pp-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
 .pp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(16px, 2.4vw, 24px); }
 .pp-card__heading { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .pp-card__heading .pp-svg { width: 18px; height: 18px; color: var(--primary); }
@@ -241,7 +241,7 @@ export default {
 .pp-util--on { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
 .pp-util--on .pp-svg { opacity: 1; }
 
-.pp-statrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pp-statrow { display: grid; grid-template-columns: 1fr; gap: 12px; }
 .pp-ministat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: var(--shadow-sm); }
 .pp-ministat--btn { cursor: pointer; font-family: inherit; transition: border-color .15s, transform .1s; }
 .pp-ministat--btn:hover { border-color: var(--primary); }
@@ -252,7 +252,7 @@ export default {
 .pp-ministat__value { font-weight: 700; color: var(--text); }
 
 .pp-kvcard { padding: 6px clamp(16px, 2.4vw, 22px); }
-.pp-kv { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
+.pp-kv { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 14px 0; border-top: 1px solid var(--border); }
 .pp-kv:first-child { border-top: none; }
 .pp-kv__label { font-weight: 700; color: var(--text); }
 .pp-kv__value { color: var(--text-muted); }
@@ -263,9 +263,21 @@ export default {
 .pp-text--muted { color: var(--text-muted); }
 .pp-svg { display: block; }
 
-@media (max-width: 960px) { .pp-grid { grid-template-columns: 1fr; } }
-@media (max-width: 640px) {
-  .pp-statrow { grid-template-columns: 1fr; }
-  .pp-kv { grid-template-columns: 1fr; gap: 4px; }
+/* Responsive to the element's OWN width (works regardless of viewport /
+   device-preview quirks). Mobile-first single column, expand as it gets wider. */
+@container (min-width: 560px) {
+  .pp-statrow { grid-template-columns: repeat(3, 1fr); }
+  .pp-kv { grid-template-columns: 180px 1fr; gap: 16px; }
+}
+@container (min-width: 760px) {
+  .pp-grid { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
+}
+/* Fallback for engines without container query support */
+@supports not (container-type: inline-size) {
+  @media (min-width: 760px) {
+    .pp-grid { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
+    .pp-statrow { grid-template-columns: repeat(3, 1fr); }
+    .pp-kv { grid-template-columns: 180px 1fr; gap: 16px; }
+  }
 }
 </style>
