@@ -91,7 +91,17 @@
         <div class="pp-card pp-kvcard">
           <div class="pp-kv" v-for="(kv, i) in fields" :key="i">
             <span class="pp-kv__label">{{ fieldLabel(kv) }}</span>
-            <span class="pp-kv__value" :class="{ 'pp-muted': !fieldValue(kv) }">{{ fieldValue(kv) || '—' }}</span>
+            <a
+              v-if="fieldHref(kv)"
+              class="pp-kv__value pp-kv__link"
+              :href="fieldHref(kv)"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>{{ fieldValue(kv) || fieldHref(kv) }}</span>
+              <svg class="pp-kv__linkico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
+            </a>
+            <span v-else class="pp-kv__value" :class="{ 'pp-muted': !fieldValue(kv) }">{{ fieldValue(kv) || '—' }}</span>
           </div>
           <div v-if="!fields.length" class="pp-kv"><span class="pp-kv__value pp-muted">No fields</span></div>
         </div>
@@ -168,6 +178,18 @@ export default {
     },
     fieldLabel(kv) { return kv && typeof kv === "object" ? kv.label : ""; },
     fieldValue(kv) { return kv && typeof kv === "object" ? kv.value : kv; },
+    isUrl(v) { return typeof v === "string" && /^https?:\/\//i.test(v.trim()); },
+    // Returns a URL when the field is a link: explicit url/href/link key, else
+    // auto-detected from a value that starts with http(s)://. Empty otherwise.
+    fieldHref(kv) {
+      if (kv && typeof kv === "object") {
+        if (typeof kv.url === "string" && kv.url) return kv.url.trim();
+        if (typeof kv.href === "string" && kv.href) return kv.href.trim();
+        if (typeof kv.link === "string" && kv.link) return kv.link.trim();
+      }
+      const v = this.fieldValue(kv);
+      return this.isUrl(v) ? String(v).trim() : "";
+    },
     emit(name) { this.$emit("trigger-event", { name, event: {} }); },
     emitFile(i, f) { this.$emit("trigger-event", { name: "fileClick", event: { index: i, name: (f && f.name) || f || "" } }); },
   },
@@ -257,6 +279,9 @@ export default {
 .pp-kv:first-child { border-top: none; }
 .pp-kv__label { font-weight: 700; color: var(--text); }
 .pp-kv__value { color: var(--text-muted); }
+.pp-kv__link { color: var(--info); font-weight: 600; text-decoration: none; word-break: break-word; cursor: pointer; }
+.pp-kv__link:hover { text-decoration: underline; }
+.pp-kv__linkico { display: inline-block; width: 13px; height: 13px; vertical-align: -1px; margin-left: 4px; flex: none; }
 
 .pp-text--success { color: var(--success); }
 .pp-text--danger { color: var(--danger); }
