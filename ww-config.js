@@ -8,6 +8,7 @@ export default {
     { name: "fileClick", label: { en: "On inspection file click" }, event: { index: 0, name: "" } },
     { name: "otherProjects", label: { en: "On 'other projects' click" }, event: {} },
     { name: "utilityClick", label: { en: "On utility click (toggle/update)" }, event: { key: "", label: "", on: true, next: false } },
+    { name: "fieldEdit", label: { en: "On field saved (inline edit)" }, event: { index: 0, label: "", key: "", value: "", valueLabel: "", type: "", field: {} } },
   ],
   properties: {
     // ---- address column ----
@@ -45,15 +46,39 @@ export default {
     estimateStatus: { label: { en: "Estimate status" }, type: "Text", defaultValue: "Approved", bindable: true },
     assignee: { label: { en: "Assignee" }, type: "Text", defaultValue: "Charlie Binder", bindable: true },
     client: { label: { en: "Client" }, type: "Text", defaultValue: "Repipe Specialists - Sales", bindable: true },
+    // ---- inline editing ----
+    allowInlineEdit: { label: { en: "Allow inline field editing" }, type: "OnOff", defaultValue: true, bindable: true },
+
     // ---- key/value fields ----
+    // Per-field options: label, value, url/href/link (link fields),
+    //   editable (bool), type ("multiline" | "select" | "url" | "text"),
+    //   optionsKey / optionLabel / optionValue (for "select", pulled from Option sources).
     fields: {
       label: { en: "Detail fields" }, type: "Array", bindable: true,
       defaultValue: [
-        { label: "Scope", value: "<span style=\"color: rgb(154, 166, 184);\">Resident said: bathroom wall has water damage\\ Additional Details: paint is bubbling and there is discoloration near the ceiling\\ \\ Permission to Enter: Yes\\ \\ Entry Notes: I will be present to assist</span>" },
-        { label: "Notes", value: "Homeowner prefers morning access. Pets on site." },
-        { label: "Access", value: "Lockbox code provided on arrival day." },
-        { label: "Document Display Type", value: "Estimate" },
-        { label: "Portal Link", value: "https://app.propertymeld.com/1845/v/10589/meld/13193048/summary/" },
+        { label: "Scope", value: "<span style=\"color: rgb(154, 166, 184);\">Resident said: bathroom wall has water damage\\ Additional Details: paint is bubbling and there is discoloration near the ceiling\\ \\ Permission to Enter: Yes\\ \\ Entry Notes: I will be present to assist</span>", editable: true, type: "multiline" },
+        { label: "Notes", value: "Homeowner prefers morning access. Pets on site.", editable: true, type: "multiline" },
+        { label: "Access", value: "Lockbox code provided on arrival day.", editable: true, type: "multiline" },
+        { label: "Document Display Type", value: "recDocSup", editable: true, type: "select", optionsKey: "documentTypes", optionLabel: "name", optionValue: "airtable_record_id" },
+        { label: "Portal Link", value: "https://app.propertymeld.com/1845/v/10589/meld/13193048/summary/", editable: true, type: "url" },
+      ],
+    },
+
+    // ---- dropdown sources for "select" fields (e.g. Document Display Type) ----
+    // Bind to your collection; a field's optionsKey selects which list.
+    //   e.g. { documentTypes: collections['<id>']?.['data'] }
+    // Accepts a bare array, a { key: [...] } map, or [{ key, options }] pairs.
+    optionSources: {
+      label: { en: "Option sources (bind)" }, type: "Array", bindable: true, section: "settings",
+      defaultValue: [
+        {
+          key: "documentTypes",
+          options: [
+            { name: "Standard", airtable_record_id: "recDocStd" },
+            { name: "Superior", airtable_record_id: "recDocSup" },
+            { name: "Basic", airtable_record_id: "recDocBas" },
+          ],
+        },
       ],
     },
     primaryColor: { label: { en: "Primary color" }, type: "Color", defaultValue: "#10b981", bindable: true },

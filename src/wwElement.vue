@@ -89,19 +89,53 @@
           </button>
         </div>
         <div class="pp-card pp-kvcard">
-          <div class="pp-kv" v-for="(kv, i) in fields" :key="i">
+          <div class="pp-kv" v-for="(kv, i) in fields" :key="i" :class="{ 'pp-kv--editing': editingIndex === i }">
             <span class="pp-kv__label">{{ fieldLabel(kv) }}</span>
-            <a
-              v-if="fieldHref(kv)"
-              class="pp-kv__value pp-kv__link"
-              :href="fieldHref(kv)"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span>{{ fieldValue(kv) || fieldHref(kv) }}</span>
-              <svg class="pp-kv__linkico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
-            </a>
-            <span v-else class="pp-kv__value pp-kv__value--rich" :class="{ 'pp-muted': !fieldValue(kv) }">{{ richText(fieldValue(kv)) || '—' }}</span>
+            <div class="pp-kv__body">
+              <!-- edit mode -->
+              <template v-if="editingIndex === i">
+                <textarea
+                  v-if="fieldEditType(kv) === 'multiline'"
+                  class="pp-editinput pp-editinput--area" v-model="editValue" ref="editor" rows="2"
+                  @input="autoGrow" @keydown.esc="cancelEdit"
+                ></textarea>
+                <select v-else-if="fieldEditType(kv) === 'select'" class="pp-editinput" v-model="editValue" ref="editor" @keydown.esc="cancelEdit">
+                  <option value="">—</option>
+                  <option v-for="opt in fieldOptions(kv)" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+                <input
+                  v-else class="pp-editinput" :type="fieldEditType(kv) === 'url' ? 'url' : 'text'"
+                  v-model="editValue" ref="editor" :placeholder="fieldLabel(kv)"
+                  @keydown.enter="saveEdit(i, kv)" @keydown.esc="cancelEdit"
+                />
+                <div class="pp-editactions">
+                  <button type="button" class="pp-iconbtn pp-iconbtn--save" @click="saveEdit(i, kv)" title="Save">
+                    <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('check')"></path></svg>
+                  </button>
+                  <button type="button" class="pp-iconbtn" @click="cancelEdit" title="Cancel">
+                    <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('x')"></path></svg>
+                  </button>
+                </div>
+              </template>
+              <!-- read mode -->
+              <template v-else>
+                <a
+                  v-if="fieldHref(kv)"
+                  class="pp-kv__value pp-kv__link"
+                  :href="fieldHref(kv)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>{{ fieldValue(kv) || fieldHref(kv) }}</span>
+                  <svg class="pp-kv__linkico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
+                </a>
+                <span v-else-if="fieldEditType(kv) === 'select'" class="pp-kv__value" :class="{ 'pp-muted': !fieldSelectLabel(kv) }">{{ fieldSelectLabel(kv) || '—' }}</span>
+                <span v-else class="pp-kv__value pp-kv__value--rich" :class="{ 'pp-muted': !fieldValue(kv) }">{{ richText(fieldValue(kv)) || '—' }}</span>
+                <button v-if="fieldEditable(kv)" type="button" class="pp-kv__edit" @click="startEdit(i, kv)" title="Edit">
+                  <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('pencil')"></path></svg>
+                </button>
+              </template>
+            </div>
           </div>
           <div v-if="!fields.length" class="pp-kv"><span class="pp-kv__value pp-muted">No fields</span></div>
         </div>
@@ -123,14 +157,24 @@ const ICONS = {
   water: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z",
   electricity: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   gas: "M12 2s5 4.5 5 9a5 5 0 0 1-10 0c0-1.5.5-3 1.5-4.5C9 8 12 2 12 2zM12 22a3 3 0 0 1-3-3c0-1.5 1.5-3 3-4.5 1.5 1.5 3 3 3 4.5a3 3 0 0 1-3 3z",
+  pencil: "M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z",
+  check: "M20 6L9 17l-5-5",
+  x: "M18 6L6 18M6 6l12 12",
 };
 
 export default {
   props: { content: { type: Object, required: true }, uid: { type: String, required: false } },
   emits: ["trigger-event"],
+  data() {
+    return { localFields: [], editingIndex: null, editValue: "" };
+  },
+  created() { this.syncFields(); },
+  watch: {
+    "content.fields"() { this.syncFields(); },
+  },
   computed: {
     files() { return Array.isArray(this.content.inspectionFiles) ? this.content.inspectionFiles : []; },
-    fields() { return Array.isArray(this.content.fields) ? this.content.fields : []; },
+    fields() { return this.localFields; },
     utilities() {
       return [
         { key: "water", label: "Water", icon: "water", on: this.content.utilityWater !== false },
@@ -193,6 +237,85 @@ export default {
     emit(name) { this.$emit("trigger-event", { name, event: {} }); },
     emitFile(i, f) { this.$emit("trigger-event", { name: "fileClick", event: { index: i, name: (f && f.name) || f || "" } }); },
     emitUtility(u) { this.$emit("trigger-event", { name: "utilityClick", event: { key: u.key, label: u.label, on: u.on, next: !u.on } }); },
+    // ---- inline field editing ----
+    syncFields() {
+      const src = Array.isArray(this.content.fields) ? this.content.fields : [];
+      this.localFields = src.map((f) => (f && typeof f === "object" ? Object.assign({}, f) : { value: f }));
+      this.editingIndex = null;
+    },
+    fieldEditable(kv) { return this.content.allowInlineEdit !== false && kv && typeof kv === "object" && kv.editable === true; },
+    fieldEditType(kv) {
+      if (kv && kv.type) return kv.type;         // multiline | select | url | text
+      if (this.fieldHref(kv)) return "url";
+      return "text";
+    },
+    fieldOptions(kv) {
+      let src = Array.isArray(kv.options) && kv.options.length ? kv.options : null;
+      if (!src && kv.optionsKey) {
+        let os = this.content.optionSources;
+        if (os && !Array.isArray(os) && Array.isArray(os.data)) os = os.data;
+        let list = null;
+        if (Array.isArray(os)) {
+          const isPairs = os.some((o) => o && typeof o === "object" && "key" in o && "options" in o);
+          if (isPairs) { const f = os.find((o) => o && o.key === kv.optionsKey); if (f) list = f.options; }
+          else list = os;
+        } else if (os && typeof os === "object") { list = os[kv.optionsKey]; }
+        if (list && !Array.isArray(list) && Array.isArray(list.data)) list = list.data;
+        if (Array.isArray(list)) src = list;
+      }
+      if (!src) return [];
+      const lk = kv.optionLabel, vk = kv.optionValue;
+      const mapped = src.map((o) => {
+        if (o && typeof o === "object") {
+          const label = lk && o[lk] != null ? o[lk] : (o.name || o.label || o.title || o.value || "");
+          const value = vk ? (o[vk] != null ? o[vk] : "") : label;
+          return { label: String(label), value };
+        }
+        return { label: String(o), value: o };
+      });
+      mapped.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" }));
+      return mapped;
+    },
+    fieldSelectLabel(kv) {
+      const v = this.fieldValue(kv);
+      const m = this.fieldOptions(kv).find((o) => o.value === v || String(o.value) === String(v));
+      return m ? m.label : (v == null ? "" : String(v));
+    },
+    autoGrow(e) {
+      const el = e && e.target ? e.target : e;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 320) + "px";
+    },
+    startEdit(i, kv) {
+      if (!this.fieldEditable(kv)) return;
+      this.editingIndex = i;
+      // Multiline edits the cleaned text (no raw HTML/"\\"); others edit raw value.
+      this.editValue = this.fieldEditType(kv) === "multiline"
+        ? this.richText(this.fieldValue(kv))
+        : (this.fieldValue(kv) == null ? "" : this.fieldValue(kv));
+      this.$nextTick(() => {
+        const el = this.$refs.editor;
+        const node = Array.isArray(el) ? el[0] : el;
+        if (node) {
+          node.focus();
+          if (node.tagName === "TEXTAREA") { node.style.height = "auto"; node.style.height = Math.min(node.scrollHeight, 320) + "px"; }
+          else if (node.select) node.select();
+        }
+      });
+    },
+    cancelEdit() { this.editingIndex = null; },
+    saveEdit(i, kv) {
+      const value = this.editValue;
+      const nf = Object.assign({}, this.localFields[i], { value });
+      this.localFields.splice(i, 1, nf);
+      this.editingIndex = null;
+      const type = this.fieldEditType(kv);
+      const label = this.fieldLabel(kv);
+      let valueLabel = value;
+      if (type === "select") { const opt = this.fieldOptions(kv).find((o) => String(o.value) === String(value)); valueLabel = opt ? opt.label : value; }
+      this.$emit("trigger-event", { name: "fieldEdit", event: { index: i, label, key: kv.key || label, value, valueLabel, type, field: Object.assign({}, nf) } });
+    },
     decodeEntities(s) {
       return String(s)
         .replace(/&nbsp;/gi, " ")
@@ -309,8 +432,25 @@ export default {
 .pp-kv { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 14px 0; border-top: 1px solid var(--border); }
 .pp-kv:first-child { border-top: none; }
 .pp-kv__label { font-weight: 700; color: var(--text); }
-.pp-kv__value { color: var(--text-muted); }
+.pp-kv__body { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.pp-kv--editing .pp-kv__body { flex-direction: column; align-items: stretch; gap: 8px; }
+.pp-kv__value { color: var(--text-muted); flex: 1 1 auto; min-width: 0; }
 .pp-kv__value--rich { white-space: pre-line; word-break: break-word; line-height: 1.55; }
+
+.pp-kv__edit { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; border: none; background: none; color: var(--text-subtle); cursor: pointer; opacity: .45; transition: opacity .15s, background .15s, color .15s; }
+.pp-kv:hover .pp-kv__edit { opacity: 1; }
+.pp-kv__edit:hover { background: var(--surface-2); color: var(--primary); }
+.pp-kv__edit .pp-svg { width: 15px; height: 15px; }
+
+.pp-editinput { width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 13.5px; font-family: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
+.pp-editinput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.pp-editinput--area { resize: none; overflow-y: auto; min-height: 40px; max-height: 320px; line-height: 1.5; white-space: pre-wrap; }
+.pp-editactions { display: flex; gap: 6px; justify-content: flex-end; }
+.pp-iconbtn { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: background .15s, filter .15s; }
+.pp-iconbtn:hover { background: var(--surface-2); }
+.pp-iconbtn .pp-svg { width: 16px; height: 16px; }
+.pp-iconbtn--save { color: #fff; background: var(--primary); border-color: var(--primary); }
+.pp-iconbtn--save:hover { background: var(--primary); filter: brightness(1.06); }
 .pp-kv__link { color: var(--info); font-weight: 600; text-decoration: none; word-break: break-word; cursor: pointer; }
 .pp-kv__link:hover { text-decoration: underline; }
 .pp-kv__linkico { display: inline-block; width: 13px; height: 13px; vertical-align: -1px; margin-left: 4px; flex: none; }
