@@ -94,28 +94,45 @@
             <div class="pp-kv__body">
               <!-- edit mode -->
               <template v-if="editingIndex === i">
-                <textarea
-                  v-if="fieldEditType(kv) === 'multiline'"
-                  class="pp-editinput pp-editinput--area" v-model="editValue" ref="editor" rows="2"
-                  @input="autoGrow" @keydown.esc="cancelEdit"
-                ></textarea>
-                <select v-else-if="fieldEditType(kv) === 'select'" class="pp-editinput" v-model="editValue" ref="editor" @keydown.esc="cancelEdit">
-                  <option value="">—</option>
-                  <option v-for="opt in fieldOptions(kv)" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-                <input
-                  v-else class="pp-editinput" :type="fieldEditType(kv) === 'url' ? 'url' : 'text'"
-                  v-model="editValue" ref="editor" :placeholder="fieldLabel(kv)"
-                  @keydown.enter="saveEdit(i, kv)" @keydown.esc="cancelEdit"
-                />
-                <div class="pp-editactions">
-                  <button type="button" class="pp-iconbtn pp-iconbtn--save" @click="saveEdit(i, kv)" title="Save">
-                    <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('check')"></path></svg>
-                  </button>
-                  <button type="button" class="pp-iconbtn" @click="cancelEdit" title="Cancel">
-                    <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('x')"></path></svg>
-                  </button>
-                </div>
+                <!-- select: custom list with icons -->
+                <template v-if="fieldEditType(kv) === 'select'">
+                  <div class="pp-optionlist">
+                    <button
+                      v-for="opt in fieldOptions(kv)" :key="opt.value" type="button" class="pp-optionlist__item"
+                      :class="{ 'pp-optionlist__item--active': String(opt.value) === String(editValue) }"
+                      @click="pickOption(i, kv, opt)"
+                    >
+                      <img v-if="opt.icon" class="pp-optionlist__icon" :src="opt.icon" alt="" loading="lazy" />
+                      <span class="pp-optionlist__label">{{ opt.label }}</span>
+                      <svg v-if="String(opt.value) === String(editValue)" class="pp-svg pp-optionlist__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('check')"></path></svg>
+                    </button>
+                    <div v-if="!fieldOptions(kv).length" class="pp-optionlist__empty">No options — bind “Option sources”</div>
+                  </div>
+                  <div class="pp-editactions">
+                    <button type="button" class="pp-iconbtn" @click="cancelEdit" title="Cancel"><svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('x')"></path></svg></button>
+                  </div>
+                </template>
+                <!-- text / multiline / url -->
+                <template v-else>
+                  <textarea
+                    v-if="fieldEditType(kv) === 'multiline'"
+                    class="pp-editinput pp-editinput--area" v-model="editValue" ref="editor" rows="2"
+                    @input="autoGrow" @keydown.esc="cancelEdit"
+                  ></textarea>
+                  <input
+                    v-else class="pp-editinput" :type="fieldEditType(kv) === 'url' ? 'url' : 'text'"
+                    v-model="editValue" ref="editor" :placeholder="fieldLabel(kv)"
+                    @keydown.enter="saveEdit(i, kv)" @keydown.esc="cancelEdit"
+                  />
+                  <div class="pp-editactions">
+                    <button type="button" class="pp-iconbtn pp-iconbtn--save" @click="saveEdit(i, kv)" title="Save">
+                      <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('check')"></path></svg>
+                    </button>
+                    <button type="button" class="pp-iconbtn" @click="cancelEdit" title="Cancel">
+                      <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('x')"></path></svg>
+                    </button>
+                  </div>
+                </template>
               </template>
               <!-- read mode -->
               <template v-else>
@@ -129,7 +146,10 @@
                   <span>{{ fieldValue(kv) || fieldHref(kv) }}</span>
                   <svg class="pp-kv__linkico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
                 </a>
-                <span v-else-if="fieldEditType(kv) === 'select'" class="pp-kv__value" :class="{ 'pp-muted': !fieldSelectLabel(kv) }">{{ fieldSelectLabel(kv) || '—' }}</span>
+                <span v-else-if="fieldEditType(kv) === 'select'" class="pp-kv__value pp-kv__value--opt" :class="{ 'pp-muted': !fieldSelectLabel(kv) }">
+                  <img v-if="selectedOption(kv).icon" class="pp-opt__icon" :src="selectedOption(kv).icon" alt="" />
+                  {{ fieldSelectLabel(kv) || '—' }}
+                </span>
                 <span v-else class="pp-kv__value pp-kv__value--rich" :class="{ 'pp-muted': !fieldValue(kv) }">{{ richText(fieldValue(kv)) || '—' }}</span>
                 <button v-if="fieldEditable(kv)" type="button" class="pp-kv__edit" @click="startEdit(i, kv)" title="Edit">
                   <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('pencil')"></path></svg>
@@ -263,7 +283,18 @@ export default {
         optionsKey: (kv && kv.optionsKey) || match.optionsKey || null,
         optionLabel: (kv && kv.optionLabel) || match.optionLabel || null,
         optionValue: (kv && kv.optionValue) || match.optionValue || null,
+        optionIcon: (kv && kv.optionIcon) || match.optionIcon || null,
       };
+    },
+    getPath(obj, path) {
+      if (obj == null || path == null || path === "") return undefined;
+      if (String(path).indexOf(".") === -1) return obj[path];
+      return String(path).split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
+    },
+    optionIconUrl(v) {
+      if (Array.isArray(v)) v = v[0];
+      if (v && typeof v === "object") return v.url || v.src || (v.thumbnails && v.thumbnails.small && v.thumbnails.small.url) || "";
+      return v || "";
     },
     fieldEditable(kv) { return this.content.allowInlineEdit !== false && kv && typeof kv === "object" && this.editorFor(kv).editable; },
     fieldEditType(kv) {
@@ -288,14 +319,15 @@ export default {
         if (Array.isArray(list)) src = list;
       }
       if (!src) return [];
-      const lk = e.optionLabel, vk = e.optionValue;
+      const lk = e.optionLabel, vk = e.optionValue, ik = e.optionIcon;
       const mapped = src.map((o) => {
         if (o && typeof o === "object") {
           const label = lk && o[lk] != null ? o[lk] : (o.name || o.label || o.title || o.value || "");
           const value = vk ? (o[vk] != null ? o[vk] : "") : label;
-          return { label: String(label), value };
+          const icon = this.optionIconUrl(ik ? this.getPath(o, ik) : (o.icon || o.image || o.avatar || o.attachments));
+          return { label: String(label), value, icon };
         }
-        return { label: String(o), value: o };
+        return { label: String(o), value: o, icon: "" };
       });
       mapped.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" }));
       return mapped;
@@ -304,6 +336,14 @@ export default {
       const v = this.fieldValue(kv);
       const m = this.fieldOptions(kv).find((o) => o.value === v || String(o.value) === String(v));
       return m ? m.label : (v == null ? "" : String(v));
+    },
+    selectedOption(kv) {
+      const v = this.fieldValue(kv);
+      return this.fieldOptions(kv).find((o) => o.value === v || String(o.value) === String(v)) || {};
+    },
+    pickOption(i, kv, opt) {
+      this.editValue = opt.value;
+      this.saveEdit(i, kv);
     },
     autoGrow(e) {
       const el = e && e.target ? e.target : e;
@@ -491,6 +531,18 @@ export default {
 .pp-iconbtn .pp-svg { width: 16px; height: 16px; }
 .pp-iconbtn--save { color: #fff; background: var(--primary); border-color: var(--primary); }
 .pp-iconbtn--save:hover { background: var(--primary); filter: brightness(1.06); }
+
+/* custom select with icons */
+.pp-optionlist { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; padding: 6px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); }
+.pp-optionlist__item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: none; background: none; border-radius: 8px; cursor: pointer; font: inherit; color: var(--text); }
+.pp-optionlist__item:hover { background: var(--surface-2); }
+.pp-optionlist__item--active { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.pp-optionlist__icon { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; flex: none; background: var(--surface-3); }
+.pp-optionlist__label { flex: 1 1 auto; font-size: 13.5px; font-weight: 600; min-width: 0; word-break: break-word; }
+.pp-optionlist__check { width: 16px; height: 16px; color: var(--primary); flex: none; }
+.pp-optionlist__empty { padding: 12px; font-size: 12.5px; color: var(--text-subtle); text-align: center; }
+.pp-kv__value--opt { display: inline-flex; align-items: center; }
+.pp-opt__icon { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex: none; margin-right: 8px; background: var(--surface-3); }
 .pp-kv__link { color: var(--info); font-weight: 600; text-decoration: none; word-break: break-word; cursor: pointer; }
 .pp-kv__link:hover { text-decoration: underline; }
 .pp-kv__linkico { display: inline-block; width: 13px; height: 13px; vertical-align: -1px; margin-left: 4px; flex: none; }
