@@ -76,7 +76,7 @@ export default {
         { match: "Scope", type: "multiline" },
         { match: "Notes", type: "multiline" },
         { match: "Access", type: "multiline" },
-        { match: "Document Display Type", type: "select", optionsKey: "documentTypes", optionLabel: "name", optionValue: "airtable_id", optionIcon: "attachments" },
+        { match: "Document Display Type", patchKey: "image_header", type: "select", optionsKey: "documentTypes", optionLabel: "name", optionValue: "airtable_id", optionIcon: "attachments" },
         { match: "Portal Link", type: "url" },
       ],
     },

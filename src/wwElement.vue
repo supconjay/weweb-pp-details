@@ -284,6 +284,8 @@ export default {
         optionLabel: (kv && kv.optionLabel) || match.optionLabel || null,
         optionValue: (kv && kv.optionValue) || match.optionValue || null,
         optionIcon: (kv && kv.optionIcon) || match.optionIcon || null,
+        // Column name written by the patch/save; falls back to the field key, then label.
+        saveKey: (kv && kv.key) || match.patchKey || match.key || null,
       };
     },
     getPath(obj, path) {
@@ -295,6 +297,14 @@ export default {
       if (Array.isArray(v)) v = v[0];
       if (v && typeof v === "object") return v.url || v.src || (v.thumbnails && v.thumbnails.small && v.thumbnails.small.url) || "";
       return v || "";
+    },
+    // Resolves an option's stored value. Uses the configured optionValue; if that
+    // key is missing/empty, falls back to common id fields so a misconfigured or
+    // renamed field (airtable_id vs airtable_record_id) still returns an id.
+    optionValueOf(o, vk, label) {
+      if (vk && o[vk] != null && o[vk] !== "") return o[vk];
+      for (const k of ["airtable_id", "airtable_record_id", "id"]) if (o[k] != null && o[k] !== "") return o[k];
+      return vk ? "" : label;
     },
     fieldEditable(kv) { return this.content.allowInlineEdit !== false && kv && typeof kv === "object" && this.editorFor(kv).editable; },
     fieldEditType(kv) {
@@ -323,7 +333,7 @@ export default {
       const mapped = src.map((o) => {
         if (o && typeof o === "object") {
           const label = lk && o[lk] != null ? o[lk] : (o.name || o.label || o.title || o.value || "");
-          const value = vk ? (o[vk] != null ? o[vk] : "") : label;
+          const value = this.optionValueOf(o, vk, label);
           const icon = this.optionIconUrl(ik ? this.getPath(o, ik) : (o.icon || o.image || o.avatar || o.attachments));
           return { label: String(label), value, icon };
         }
@@ -390,7 +400,7 @@ export default {
       const label = this.fieldLabel(kv);
       let valueLabel = value;
       if (type === "select") { const opt = this.fieldOptions(kv).find((o) => String(o.value) === String(value)); valueLabel = opt ? opt.label : value; }
-      const key = kv.key || label;
+      const key = this.editorFor(kv).saveKey || label;
       // `patch` is a ready-to-save object keyed by the field's column name, so a
       // single Update action can write just the changed field: bind Fields -> event.patch.
       const patch = { [key]: value };
