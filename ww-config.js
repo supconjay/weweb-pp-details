@@ -8,7 +8,7 @@ export default {
     { name: "fileClick", label: { en: "On inspection file click" }, event: { index: 0, name: "" } },
     { name: "otherProjects", label: { en: "On 'other projects' click" }, event: {} },
     { name: "utilityClick", label: { en: "On utility click (toggle/update)" }, event: { key: "", label: "", on: true, next: false } },
-    { name: "fieldEdit", label: { en: "On field saved (inline edit)" }, event: { index: 0, label: "", key: "", value: "", valueLabel: "", type: "", field: {} } },
+    { name: "fieldEdit", label: { en: "On field saved (inline edit)" }, event: { index: 0, label: "", key: "", value: "", valueLabel: "", type: "", patch: {}, field: {} } },
   ],
   properties: {
     // ---- address column ----

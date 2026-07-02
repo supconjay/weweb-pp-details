@@ -350,7 +350,11 @@ export default {
       const label = this.fieldLabel(kv);
       let valueLabel = value;
       if (type === "select") { const opt = this.fieldOptions(kv).find((o) => String(o.value) === String(value)); valueLabel = opt ? opt.label : value; }
-      this.$emit("trigger-event", { name: "fieldEdit", event: { index: i, label, key: kv.key || label, value, valueLabel, type, field: Object.assign({}, nf) } });
+      const key = kv.key || label;
+      // `patch` is a ready-to-save object keyed by the field's column name, so a
+      // single Update action can write just the changed field: bind Fields -> event.patch.
+      const patch = { [key]: value };
+      this.$emit("trigger-event", { name: "fieldEdit", event: { index: i, label, key, value, valueLabel, type, patch, field: Object.assign({}, nf) } });
     },
     decodeEntities(s) {
       return String(s)
