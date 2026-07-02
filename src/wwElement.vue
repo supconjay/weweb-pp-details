@@ -243,28 +243,52 @@ export default {
       this.localFields = src.map((f) => (f && typeof f === "object" ? Object.assign({}, f) : { value: f }));
       this.editingIndex = null;
     },
-    fieldEditable(kv) { return this.content.allowInlineEdit !== false && kv && typeof kv === "object" && kv.editable === true; },
+    // Resolves per-field edit settings. Inline props on the field win; otherwise
+    // a shared "Field editors" entry matched by label/key supplies them — so a
+    // bound `fields` array only needs { label, value } and editing still works.
+    editorFor(kv) {
+      const label = String(this.fieldLabel(kv) || "").toLowerCase();
+      const key = kv && kv.key != null ? String(kv.key).toLowerCase() : "";
+      const list = Array.isArray(this.content.fieldEditors) ? this.content.fieldEditors : [];
+      const match = list.find((e) => {
+        if (!e) return false;
+        const m = String(e.match != null ? e.match : (e.label != null ? e.label : (e.key != null ? e.key : ""))).toLowerCase();
+        return m !== "" && (m === label || (key && m === key));
+      }) || {};
+      const has = Object.keys(match).length > 0;
+      return {
+        editable: kv && kv.editable != null ? kv.editable === true : (match.editable != null ? match.editable === true : has),
+        type: (kv && kv.type) || match.type || null,
+        options: (Array.isArray(kv && kv.options) && kv.options.length ? kv.options : null) || (Array.isArray(match.options) && match.options.length ? match.options : null),
+        optionsKey: (kv && kv.optionsKey) || match.optionsKey || null,
+        optionLabel: (kv && kv.optionLabel) || match.optionLabel || null,
+        optionValue: (kv && kv.optionValue) || match.optionValue || null,
+      };
+    },
+    fieldEditable(kv) { return this.content.allowInlineEdit !== false && kv && typeof kv === "object" && this.editorFor(kv).editable; },
     fieldEditType(kv) {
-      if (kv && kv.type) return kv.type;         // multiline | select | url | text
+      const e = this.editorFor(kv);
+      if (e.type) return e.type;                 // multiline | select | url | text
       if (this.fieldHref(kv)) return "url";
       return "text";
     },
     fieldOptions(kv) {
-      let src = Array.isArray(kv.options) && kv.options.length ? kv.options : null;
-      if (!src && kv.optionsKey) {
+      const e = this.editorFor(kv);
+      let src = Array.isArray(e.options) && e.options.length ? e.options : null;
+      if (!src && e.optionsKey) {
         let os = this.content.optionSources;
         if (os && !Array.isArray(os) && Array.isArray(os.data)) os = os.data;
         let list = null;
         if (Array.isArray(os)) {
           const isPairs = os.some((o) => o && typeof o === "object" && "key" in o && "options" in o);
-          if (isPairs) { const f = os.find((o) => o && o.key === kv.optionsKey); if (f) list = f.options; }
+          if (isPairs) { const f = os.find((o) => o && o.key === e.optionsKey); if (f) list = f.options; }
           else list = os;
-        } else if (os && typeof os === "object") { list = os[kv.optionsKey]; }
+        } else if (os && typeof os === "object") { list = os[e.optionsKey]; }
         if (list && !Array.isArray(list) && Array.isArray(list.data)) list = list.data;
         if (Array.isArray(list)) src = list;
       }
       if (!src) return [];
-      const lk = kv.optionLabel, vk = kv.optionValue;
+      const lk = e.optionLabel, vk = e.optionValue;
       const mapped = src.map((o) => {
         if (o && typeof o === "object") {
           const label = lk && o[lk] != null ? o[lk] : (o.name || o.label || o.title || o.value || "");
@@ -290,10 +314,22 @@ export default {
     startEdit(i, kv) {
       if (!this.fieldEditable(kv)) return;
       this.editingIndex = i;
-      // Multiline edits the cleaned text (no raw HTML/"\\"); others edit raw value.
-      this.editValue = this.fieldEditType(kv) === "multiline"
-        ? this.richText(this.fieldValue(kv))
-        : (this.fieldValue(kv) == null ? "" : this.fieldValue(kv));
+      const type = this.fieldEditType(kv);
+      if (type === "multiline") {
+        // Edit the cleaned text (no raw HTML/"\\").
+        this.editValue = this.richText(this.fieldValue(kv));
+      } else if (type === "select") {
+        // Accept a stored id OR label; normalize to the option value.
+        let v = this.fieldValue(kv);
+        const opts = this.fieldOptions(kv);
+        if (!opts.some((o) => String(o.value) === String(v))) {
+          const byLabel = opts.find((o) => String(o.label) === String(v));
+          if (byLabel) v = byLabel.value;
+        }
+        this.editValue = v == null ? "" : v;
+      } else {
+        this.editValue = this.fieldValue(kv) == null ? "" : this.fieldValue(kv);
+      }
       this.$nextTick(() => {
         const el = this.$refs.editor;
         const node = Array.isArray(el) ? el[0] : el;

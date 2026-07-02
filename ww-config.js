@@ -50,17 +50,34 @@ export default {
     allowInlineEdit: { label: { en: "Allow inline field editing" }, type: "OnOff", defaultValue: true, bindable: true },
 
     // ---- key/value fields ----
-    // Per-field options: label, value, url/href/link (link fields),
-    //   editable (bool), type ("multiline" | "select" | "url" | "text"),
-    //   optionsKey / optionLabel / optionValue (for "select", pulled from Option sources).
+    // Bound data only needs { label, value } (plus url/href/link for link fields).
+    // Edit behavior is configured separately in "Field editors" (matched by label),
+    // so binding this array does NOT strip editability. You can still override
+    // per-field with inline: editable, type, optionsKey/optionLabel/optionValue.
     fields: {
       label: { en: "Detail fields" }, type: "Array", bindable: true,
       defaultValue: [
-        { label: "Scope", value: "<span style=\"color: rgb(154, 166, 184);\">Resident said: bathroom wall has water damage\\ Additional Details: paint is bubbling and there is discoloration near the ceiling\\ \\ Permission to Enter: Yes\\ \\ Entry Notes: I will be present to assist</span>", editable: true, type: "multiline" },
-        { label: "Notes", value: "Homeowner prefers morning access. Pets on site.", editable: true, type: "multiline" },
-        { label: "Access", value: "Lockbox code provided on arrival day.", editable: true, type: "multiline" },
-        { label: "Document Display Type", value: "recDocSup", editable: true, type: "select", optionsKey: "documentTypes", optionLabel: "name", optionValue: "airtable_record_id" },
-        { label: "Portal Link", value: "https://app.propertymeld.com/1845/v/10589/meld/13193048/summary/", editable: true, type: "url" },
+        { label: "Scope", value: "<span style=\"color: rgb(154, 166, 184);\">Resident said: bathroom wall has water damage\\ Additional Details: paint is bubbling and there is discoloration near the ceiling\\ \\ Permission to Enter: Yes\\ \\ Entry Notes: I will be present to assist</span>" },
+        { label: "Notes", value: "Homeowner prefers morning access. Pets on site." },
+        { label: "Access", value: "Lockbox code provided on arrival day." },
+        { label: "Document Display Type", value: "recDocSup" },
+        { label: "Portal Link", value: "https://app.propertymeld.com/1845/v/10589/meld/13193048/summary/" },
+      ],
+    },
+
+    // ---- field editors: which fields are inline-editable + how (matched by label) ----
+    // `match` matches the field's label (or key), case-insensitive.
+    //   type: "multiline" | "select" | "url" | "text"
+    //   for select: optionsKey (into Option sources) + optionLabel + optionValue
+    // Because this is keyed by label, binding the fields array above keeps editing.
+    fieldEditors: {
+      label: { en: "Field editors (by label)" }, type: "Array", bindable: true, section: "settings",
+      defaultValue: [
+        { match: "Scope", type: "multiline" },
+        { match: "Notes", type: "multiline" },
+        { match: "Access", type: "multiline" },
+        { match: "Document Display Type", type: "select", optionsKey: "documentTypes", optionLabel: "name", optionValue: "airtable_record_id" },
+        { match: "Portal Link", type: "url" },
       ],
     },
 
