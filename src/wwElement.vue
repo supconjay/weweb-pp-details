@@ -61,10 +61,10 @@
         <div class="pp-field">
           <span class="pp-field__label">Utilities</span>
           <div class="pp-utils">
-            <span v-for="u in utilities" :key="u.key" class="pp-util" :class="{ 'pp-util--on': u.on }">
+            <button v-for="u in utilities" :key="u.key" type="button" class="pp-util" :class="{ 'pp-util--on': u.on }" @click="emitUtility(u)">
               <svg class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic(u.icon)"></path></svg>
               {{ u.label }}
-            </span>
+            </button>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@
               <span>{{ fieldValue(kv) || fieldHref(kv) }}</span>
               <svg class="pp-kv__linkico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('external')"></path></svg>
             </a>
-            <span v-else class="pp-kv__value" :class="{ 'pp-muted': !fieldValue(kv) }">{{ fieldValue(kv) || '—' }}</span>
+            <span v-else class="pp-kv__value pp-kv__value--rich" :class="{ 'pp-muted': !fieldValue(kv) }">{{ richText(fieldValue(kv)) || '—' }}</span>
           </div>
           <div v-if="!fields.length" class="pp-kv"><span class="pp-kv__value pp-muted">No fields</span></div>
         </div>
@@ -192,6 +192,34 @@ export default {
     },
     emit(name) { this.$emit("trigger-event", { name, event: {} }); },
     emitFile(i, f) { this.$emit("trigger-event", { name: "fileClick", event: { index: i, name: (f && f.name) || f || "" } }); },
+    emitUtility(u) { this.$emit("trigger-event", { name: "utilityClick", event: { key: u.key, label: u.label, on: u.on, next: !u.on } }); },
+    decodeEntities(s) {
+      return String(s)
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&apos;/gi, "'")
+        .replace(/&amp;/gi, "&");
+    },
+    // Cleans rich-text/HTML field values so they read nicely: turns <br>, </p>,
+    // and the "\\" markers into real line breaks, strips remaining tags, and
+    // decodes entities. Rendered with white-space: pre-line so breaks show.
+    richText(v) {
+      if (v == null || v === "") return "";
+      if (typeof v !== "string") return String(v);
+      let s = v;
+      s = s.replace(/<\s*br\s*\/?>/gi, "\n");           // <br> / <br/>
+      s = s.replace(/<\/p\s*>\s*<p[^>]*>/gi, "\n\n");   // paragraph breaks
+      s = s.replace(/<\/(p|div|li)\s*>/gi, "\n");        // block-close -> newline
+      s = s.replace(/<[^>]+>/g, "");                      // strip remaining tags
+      s = s.replace(/\s*\\+\s*/g, "\n");                  // "\\" line markers -> newline
+      s = this.decodeEntities(s);
+      s = s.replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n"); // trim around breaks
+      s = s.replace(/\n{3,}/g, "\n\n");                   // cap blank runs
+      return s.trim();
+    },
   },
 };
 </script>
@@ -259,9 +287,12 @@ export default {
 .pp-btn--upload:hover { background: color-mix(in srgb, var(--primary) 20%, transparent); border-style: solid; }
 
 .pp-utils { display: flex; flex-wrap: wrap; gap: 8px; }
-.pp-util { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-3); color: var(--text-subtle); border: 1px solid var(--border); }
+.pp-util { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-3); color: var(--text-subtle); border: 1px solid var(--border); font-family: inherit; cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .1s; }
+.pp-util:hover { border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: var(--text); }
+.pp-util:active { transform: translateY(1px); }
 .pp-util .pp-svg { width: 14px; height: 14px; opacity: .7; }
 .pp-util--on { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+.pp-util--on:hover { background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--primary); }
 .pp-util--on .pp-svg { opacity: 1; }
 
 .pp-statrow { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -279,6 +310,7 @@ export default {
 .pp-kv:first-child { border-top: none; }
 .pp-kv__label { font-weight: 700; color: var(--text); }
 .pp-kv__value { color: var(--text-muted); }
+.pp-kv__value--rich { white-space: pre-line; word-break: break-word; line-height: 1.55; }
 .pp-kv__link { color: var(--info); font-weight: 600; text-decoration: none; word-break: break-word; cursor: pointer; }
 .pp-kv__link:hover { text-decoration: underline; }
 .pp-kv__linkico { display: inline-block; width: 13px; height: 13px; vertical-align: -1px; margin-left: 4px; flex: none; }

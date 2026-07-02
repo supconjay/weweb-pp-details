@@ -7,6 +7,7 @@ export default {
     { name: "uploadInspection", label: { en: "On inspection upload click" }, event: {} },
     { name: "fileClick", label: { en: "On inspection file click" }, event: { index: 0, name: "" } },
     { name: "otherProjects", label: { en: "On 'other projects' click" }, event: {} },
+    { name: "utilityClick", label: { en: "On utility click (toggle/update)" }, event: { key: "", label: "", on: true, next: false } },
   ],
   properties: {
     // ---- address column ----
@@ -48,11 +49,11 @@ export default {
     fields: {
       label: { en: "Detail fields" }, type: "Array", bindable: true,
       defaultValue: [
-        { label: "Scope", value: "Whole-home repipe — replace galvanized supply lines with PEX." },
+        { label: "Scope", value: "<span style=\"color: rgb(154, 166, 184);\">Resident said: bathroom wall has water damage\\ Additional Details: paint is bubbling and there is discoloration near the ceiling\\ \\ Permission to Enter: Yes\\ \\ Entry Notes: I will be present to assist</span>" },
         { label: "Notes", value: "Homeowner prefers morning access. Pets on site." },
         { label: "Access", value: "Lockbox code provided on arrival day." },
         { label: "Document Display Type", value: "Estimate" },
-        { label: "Portal Link", value: "portal.example.com/p/3420" },
+        { label: "Portal Link", value: "https://app.propertymeld.com/1845/v/10589/meld/13193048/summary/" },
       ],
     },
     primaryColor: { label: { en: "Primary color" }, type: "Color", defaultValue: "#10b981", bindable: true },
