@@ -67,6 +67,17 @@
             </button>
           </div>
         </div>
+
+        <div class="pp-field" v-if="content.showEmergency !== false">
+          <span class="pp-field__label">{{ content.emergencyLabel || 'Emergency' }}</span>
+          <button type="button" class="pp-emg" :class="{ 'pp-emg--on': localEmergency }" role="checkbox" :aria-checked="localEmergency" @click="toggleEmergency">
+            <span class="pp-emg__box">
+              <svg v-if="localEmergency" class="pp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('check')"></path></svg>
+            </span>
+            <svg class="pp-svg pp-emg__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path :d="ic('alert')"></path></svg>
+            {{ content.emergencyLabel || 'Emergency' }}
+          </button>
+        </div>
       </div>
 
       <!-- meta + key/values -->
@@ -178,6 +189,7 @@ const ICONS = {
   electricity: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   gas: "M12 2s5 4.5 5 9a5 5 0 0 1-10 0c0-1.5.5-3 1.5-4.5C9 8 12 2 12 2zM12 22a3 3 0 0 1-3-3c0-1.5 1.5-3 3-4.5 1.5 1.5 3 3 3 4.5a3 3 0 0 1-3 3z",
   pencil: "M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z",
+  alert: "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01",
   check: "M20 6L9 17l-5-5",
   x: "M18 6L6 18M6 6l12 12",
 };
@@ -186,11 +198,12 @@ export default {
   props: { content: { type: Object, required: true }, uid: { type: String, required: false } },
   emits: ["trigger-event"],
   data() {
-    return { localFields: [], editingIndex: null, editValue: "" };
+    return { localFields: [], editingIndex: null, editValue: "", localEmergency: false };
   },
-  created() { this.syncFields(); },
+  created() { this.syncFields(); this.localEmergency = this.content.emergency === true; },
   watch: {
     "content.fields"() { this.syncFields(); },
+    "content.emergency"(v) { this.localEmergency = v === true; },
   },
   computed: {
     files() { return Array.isArray(this.content.inspectionFiles) ? this.content.inspectionFiles : []; },
@@ -257,6 +270,13 @@ export default {
     emit(name) { this.$emit("trigger-event", { name, event: {} }); },
     emitFile(i, f) { this.$emit("trigger-event", { name: "fileClick", event: { index: i, name: (f && f.name) || f || "" } }); },
     emitUtility(u) { this.$emit("trigger-event", { name: "utilityClick", event: { key: u.key, label: u.label, on: u.on, next: !u.on } }); },
+    // Optimistically flips the checkbox, then hands the new value to the
+    // workflow: bind your update to event.next (or event.value, same thing).
+    toggleEmergency() {
+      const on = this.localEmergency;
+      this.localEmergency = !on;
+      this.$emit("trigger-event", { name: "emergencyToggle", event: { on, next: !on, value: !on } });
+    },
     // ---- inline field editing ----
     syncFields() {
       const src = Array.isArray(this.content.fields) ? this.content.fields : [];
@@ -507,6 +527,17 @@ export default {
 .pp-util--on { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
 .pp-util--on:hover { background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--primary); }
 .pp-util--on .pp-svg { opacity: 1; }
+
+.pp-emg { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-3); color: var(--text-subtle); border: 1px solid var(--border); font-family: inherit; cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .1s; }
+.pp-emg:hover { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--text); }
+.pp-emg:active { transform: translateY(1px); }
+.pp-emg__box { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--border-strong); background: var(--surface); flex: none; transition: background .15s, border-color .15s; }
+.pp-emg__box .pp-svg { width: 11px; height: 11px; color: #fff; }
+.pp-emg__ico { width: 14px; height: 14px; opacity: .7; }
+.pp-emg--on { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
+.pp-emg--on:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+.pp-emg--on .pp-emg__box { background: var(--danger); border-color: var(--danger); }
+.pp-emg--on .pp-emg__ico { opacity: 1; }
 
 .pp-statrow { display: grid; grid-template-columns: 1fr; gap: 12px; }
 .pp-ministat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: var(--shadow-sm); }

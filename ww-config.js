@@ -8,6 +8,7 @@ export default {
     { name: "fileClick", label: { en: "On inspection file click" }, event: { index: 0, name: "" } },
     { name: "otherProjects", label: { en: "On 'other projects' click" }, event: {} },
     { name: "utilityClick", label: { en: "On utility click (toggle/update)" }, event: { key: "", label: "", on: true, next: false } },
+    { name: "emergencyToggle", label: { en: "On emergency check/uncheck" }, event: { on: false, next: true, value: true } },
     { name: "fieldEdit", label: { en: "On field saved (inline edit)" }, event: { index: 0, label: "", key: "", value: "", valueLabel: "", type: "", patch: {}, field: {} } },
   ],
   properties: {
@@ -42,6 +43,10 @@ export default {
     utilityWater: { label: { en: "Utility: Water" }, type: "OnOff", defaultValue: true, bindable: true, section: "settings" },
     utilityElectricity: { label: { en: "Utility: Electricity" }, type: "OnOff", defaultValue: true, bindable: true, section: "settings" },
     utilityGas: { label: { en: "Utility: Gas" }, type: "OnOff", defaultValue: false, bindable: true, section: "settings" },
+    // ---- emergency (boolean checkbox under utilities) ----
+    showEmergency: { label: { en: "Show emergency checkbox" }, type: "OnOff", defaultValue: true, bindable: true, section: "settings" },
+    emergencyLabel: { label: { en: "Emergency label" }, type: "Text", defaultValue: "Emergency", bindable: true, section: "settings" },
+    emergency: { label: { en: "Emergency (bind boolean)" }, type: "OnOff", defaultValue: false, bindable: true, section: "settings" },
     // ---- meta stats ----
     estimateStatus: { label: { en: "Estimate status" }, type: "Text", defaultValue: "Approved", bindable: true },
     assignee: { label: { en: "Assignee" }, type: "Text", defaultValue: "Charlie Binder", bindable: true },
